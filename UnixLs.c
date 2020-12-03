@@ -33,6 +33,12 @@ void printLs(char *path);
 // print long ls
 void printLongLs(char *path);
 
+// print recursively
+void printRec(char *path);
+
+// print with inode number
+void printInode(char *path);
+
 
     /* 
         Helper Functions
@@ -139,8 +145,9 @@ int main(int argc, char *argv[]) {
                 printLongLs(path);
             } else if (hasR && !hasL && !hasI) {
                 printf("printing recursively\n");
+                printRec(path);
             } else if (hasI && !hasL && !hasR) {
-                printf("printing with i (not sure what 'i' is but okay?\n");
+                printInode(path);
             }
         }
 
@@ -280,6 +287,66 @@ void printLongLs(char *path) {
             free(idk);
     }
 }
+
+// print recursively
+void printRec(char *path) {
+    char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
+    strcpy(idk, path);
+    strcat(idk, "/");
+    strcat(idk, dp->d_name);
+
+    if (dir) {
+        if ((dp->d_name)[0] != '.') {
+            printf("%s\n", dp->d_name);
+            printRec(path);
+        }
+    }
+
+    free(idk);
+    return;
+}
+
+// print with inode number
+void printInode(char *path) {
+    if (!dir) {
+        printf("Something went wrong!\n");
+        exit(UNEXP_ERR);
+    }
+
+    while ((dp = readdir(dir)) != NULL) {
+        // skip file if hidden
+        if ((dp->d_name)[0] == '.') continue;
+
+        stat(dp->d_name, &buf);
+
+        printf("%lu ", buf.st_ino);
+    
+        // (column 7) print file name
+        char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
+        strcpy(idk, path);
+        strcat(idk, "/");
+        strcat(idk, dp->d_name);
+
+        DIR *optionalDir = opendir(idk);
+        struct stat optionalBuf;
+
+        if (optionalDir) {
+            // if is a directory
+            shouldHaveQuotes(dp->d_name) ? printf("'%s'/  ", dp->d_name) : printf("%s/  ", dp->d_name);
+        } else if ((stat(idk, &optionalBuf) >= 0) && (optionalBuf.st_mode > 0) && (S_IXUSR & optionalBuf.st_mode)) {
+            // if is an executable file
+            shouldHaveQuotes(dp->d_name) ? printf("'%s'*  ", dp->d_name) : printf("%s*  ", dp->d_name);
+        } else {
+            // else is a normal file
+            shouldHaveQuotes(dp->d_name) ? printf("'%s'  ", dp->d_name) : printf("%s  ", dp->d_name);
+        }
+
+        free(idk);
+    }
+
+    printf("\n");
+}
+
 
 // returns true if a file name should have quotes,
 // returns false otherwise
