@@ -177,62 +177,30 @@ void printLs(char *path) {
     }
 
     while ((dp = readdir(dir)) != NULL) {
-            // ((stat(dp->d_name, &buf) >= 0) && (buf.st_mode > 0) && (S_IXUSR & buf.st_mode));
-
-                // char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
-                // strcpy(idk, path);
-                // strcat(idk, "/");
-                // strcat(idk, dp->d_name);
-
-                // stat(idk, &buf);
-                        // if (S_ISDIR(buf.st_mode)) printf("is a dir %s\n", idk);
-
-                        // if ((dp->d_name)[0] != '.') {
-                        //     if ((stat(dp->d_name, &buf) >= 0) && (buf.st_mode > 0) && (S_IXUSR & buf.st_mode)) { // is an executable
-                        //         printf("%s is an executable!\n", dp->d_name);
-                        //     } else if (stat(dp->d_name, &buf) && S_ISDIR(buf.st_mode)) { // is a dir
-                        //         printf("%s is a dir!\n", dp->d_name);
-                        //     } else {
-                        //         printf("%s is a regular file\n", dp->d_name);
-                        //     }
-                        // }
 
             char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
             strcpy(idk, path);
             strcat(idk, "/");
             strcat(idk, dp->d_name);
+            
             DIR *optionalDir = opendir(idk);
             struct stat optionalBuf;
+
+            // skip file if hidden
+            if ((dp->d_name)[0] == '.') continue;
+
             if (optionalDir) {
-                printf("%s/\n", dp->d_name);
+                // if is a directory
+                shouldHaveQuotes(dp->d_name) ? printf("'%s'/  ", dp->d_name) : printf("%s/  ", dp->d_name);
             } else if ((stat(idk, &optionalBuf) >= 0) && (optionalBuf.st_mode > 0) && (S_IXUSR & optionalBuf.st_mode)) {
-                printf("%s*\n", dp->d_name);
+                // if is an executable file
+                shouldHaveQuotes(dp->d_name) ? printf("'%s'*  ", dp->d_name) : printf("%s*  ", dp->d_name);
             } else {
-                printf("%s\n", dp->d_name);
+                // else is a normal file
+                shouldHaveQuotes(dp->d_name) ? printf("'%s'  ", dp->d_name) : printf("%s  ", dp->d_name);
             }
+            
             free(idk);
-
-
-                // free(idk);   
-
-
-            // if (shouldHaveQuotes(dp->d_name)) {
-            //     if (stat(dp->d_name, &buf) == 0 && buf.st_mode && S_IXUSR){ // is an executable file
-            //         printf("'%s'*  ", dp->d_name);
-            //     } else if (stat(dp->d_name, &buf) && S_ISDIR(buf.st_mode)) { // is a dir
-            //         printf("'%s'/  ", dp->d_name);
-            //     } else {
-            //         printf("'%s'  ", dp->d_name);
-            //     }
-            // } else {
-            //     if (stat(dp->d_name, &buf) == 0 && buf.st_mode && S_IXUSR){ // is an executable file
-            //         printf("%s*  ", dp->d_name);
-            //     } else if (stat(dp->d_name, &buf) && S_ISDIR(buf.st_mode)) { // is a dir
-            //         printf("%s/  ", dp->d_name);
-            //     } else {
-            //         printf("%s  ", dp->d_name);
-            //     }
-            // }
     }
 
     printf("\n");
