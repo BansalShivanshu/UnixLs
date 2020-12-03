@@ -27,6 +27,9 @@
 // prints the basic ls
 void printLs();
 
+// print long ls
+void printLongLs();
+
 
     /* 
         Helper Functions
@@ -65,7 +68,7 @@ int main(int argc, char *argv[]) {
     case 1: ;
         char* path = ".";
         dir = opendir(path); // no validation required for 'this' directory
-        printLs();
+        printLs(path);
         
         break;
 
@@ -83,38 +86,56 @@ int main(int argc, char *argv[]) {
             // open the directory
             dir = opendir(path);
 
-            printLs();
+            printLs(path);
         } else if ((argv[1])[0] == '-') { // flags
-            for (int i = 1; i < strlen(argv[0]); i++) { // start after '-'
-                if ((argv[0])[i] == 'l') {
+            for (int i = 1; i < strlen(argv[1]); i++) { // start after '-'
+                switch ((argv[1])[i])
+                {
+                case 'l':
                     if (hasL) {
                         printf("Flags cannot be repeated\n");
                         exit(INCOR_USAGE);
                     } else {
                         hasL = true;
                     }
-                }
+                    break;
 
-                if ((argv[0])[i] == 'R') {
+                case 'R':
                     if (hasR) {
                         printf("Flags cannot be repeated\n");
                         exit(INCOR_USAGE);
                     } else {
                         hasR = true;
                     }
-                }
+                    break;
 
-                if ((argv[0])[i] == 'i') {
+                case 'i':
                     if (hasI) {
                         printf("Flags cannot be repeated\n");
                         exit(INCOR_USAGE);
                     } else {
                         hasI = true;
                     }
+                    break;
+                
+                default:
+                    printf("the fuck!\n");
+                    break;
                 }
             }
 
+            char* path = ".";
+            dir = opendir(path); // no validation required for 'this' directory            
+
             // print with flags
+            if (hasL && !hasR && !hasI) {
+                printf("printing long ls\n");
+                printLongLs();
+            } else if (hasR && !hasL && !hasI) {
+                printf("printing recursively\n");
+            } else if (hasI && !hasL && !hasR) {
+                printf("printing with i (not sure what 'i' is but okay?\n");
+            }
         }
 
         break;
@@ -149,23 +170,77 @@ int main(int argc, char *argv[]) {
 */
 
 // prints the basic ls
-void printLs() {
+void printLs(char *path) {
     if (!dir) {
         printf("Something went wrong!\n");
         exit(UNEXP_ERR);
     }
 
     while ((dp = readdir(dir)) != NULL) {
-        if (dp->d_name[0] != '.') {
-            if (shouldHaveQuotes(dp->d_name)) {
-                printf("'%s'  ", dp->d_name);
+            // ((stat(dp->d_name, &buf) >= 0) && (buf.st_mode > 0) && (S_IXUSR & buf.st_mode));
+
+                // char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
+                // strcpy(idk, path);
+                // strcat(idk, "/");
+                // strcat(idk, dp->d_name);
+
+                // stat(idk, &buf);
+                        // if (S_ISDIR(buf.st_mode)) printf("is a dir %s\n", idk);
+
+                        // if ((dp->d_name)[0] != '.') {
+                        //     if ((stat(dp->d_name, &buf) >= 0) && (buf.st_mode > 0) && (S_IXUSR & buf.st_mode)) { // is an executable
+                        //         printf("%s is an executable!\n", dp->d_name);
+                        //     } else if (stat(dp->d_name, &buf) && S_ISDIR(buf.st_mode)) { // is a dir
+                        //         printf("%s is a dir!\n", dp->d_name);
+                        //     } else {
+                        //         printf("%s is a regular file\n", dp->d_name);
+                        //     }
+                        // }
+
+            char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
+            strcpy(idk, path);
+            strcat(idk, "/");
+            strcat(idk, dp->d_name);
+            DIR *optionalDir = opendir(idk);
+            struct stat optionalBuf;
+            if (optionalDir) {
+                printf("%s/\n", dp->d_name);
+            } else if ((stat(idk, &optionalBuf) >= 0) && (optionalBuf.st_mode > 0) && (S_IXUSR & optionalBuf.st_mode)) {
+                printf("%s*\n", dp->d_name);
             } else {
-                printf("%s  ", dp->d_name);
+                printf("%s\n", dp->d_name);
             }
-        }
+            free(idk);
+
+
+                // free(idk);   
+
+
+            // if (shouldHaveQuotes(dp->d_name)) {
+            //     if (stat(dp->d_name, &buf) == 0 && buf.st_mode && S_IXUSR){ // is an executable file
+            //         printf("'%s'*  ", dp->d_name);
+            //     } else if (stat(dp->d_name, &buf) && S_ISDIR(buf.st_mode)) { // is a dir
+            //         printf("'%s'/  ", dp->d_name);
+            //     } else {
+            //         printf("'%s'  ", dp->d_name);
+            //     }
+            // } else {
+            //     if (stat(dp->d_name, &buf) == 0 && buf.st_mode && S_IXUSR){ // is an executable file
+            //         printf("%s*  ", dp->d_name);
+            //     } else if (stat(dp->d_name, &buf) && S_ISDIR(buf.st_mode)) { // is a dir
+            //         printf("%s/  ", dp->d_name);
+            //     } else {
+            //         printf("%s  ", dp->d_name);
+            //     }
+            // }
     }
 
     printf("\n");
+}
+
+// prints long ls
+void printLongLs() {
+
 }
 
 // returns true if a file name should have quotes,
