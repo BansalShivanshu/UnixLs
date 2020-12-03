@@ -8,6 +8,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <pwd.h>
+#include <grp.h>
+#include <time.h>
 
 
 /*
@@ -25,10 +28,10 @@
         Printing functions
     */
 // prints the basic ls
-void printLs();
+void printLs(char *path);
 
 // print long ls
-void printLongLs();
+void printLongLs(char *path);
 
 
     /* 
@@ -52,6 +55,10 @@ DIR *dir;
 struct dirent *dp;
 struct stat buf;
 
+
+/*
+    Main Function
+*/
 int main(int argc, char *argv[]) {
     if (argc > 3) {
         printf("Incorrect Usage\n");
@@ -119,8 +126,8 @@ int main(int argc, char *argv[]) {
                     break;
                 
                 default:
-                    printf("the fuck!\n");
-                    break;
+                    printf("Invalid flag Usage\n");
+                    exit(INCOR_USAGE);
                 }
             }
 
@@ -129,8 +136,7 @@ int main(int argc, char *argv[]) {
 
             // print with flags
             if (hasL && !hasR && !hasI) {
-                printf("printing long ls\n");
-                printLongLs();
+                printLongLs(path);
             } else if (hasR && !hasL && !hasI) {
                 printf("printing recursively\n");
             } else if (hasI && !hasL && !hasR) {
@@ -177,6 +183,8 @@ void printLs(char *path) {
     }
 
     while ((dp = readdir(dir)) != NULL) {
+            // skip file if hidden
+            if ((dp->d_name)[0] == '.') continue;
 
             char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
             strcpy(idk, path);
@@ -185,9 +193,6 @@ void printLs(char *path) {
             
             DIR *optionalDir = opendir(idk);
             struct stat optionalBuf;
-
-            // skip file if hidden
-            if ((dp->d_name)[0] == '.') continue;
 
             if (optionalDir) {
                 // if is a directory
@@ -207,8 +212,73 @@ void printLs(char *path) {
 }
 
 // prints long ls
-void printLongLs() {
+void printLongLs(char *path) {
+    if (!dir) {
+        printf("Something went wrong!\n");
+        exit(UNEXP_ERR);
+    }
 
+    while ((dp = readdir(dir)) != NULL) {
+            // skip file if hidden
+            if ((dp->d_name)[0] == '.') continue;
+
+            stat(dp->d_name, &buf);
+
+            // (column 1) print file permissions
+            printf((S_ISDIR(buf.st_mode)) ? "d" : "-");
+            printf((buf.st_mode & S_IRUSR) ? "r" : "-");
+            printf((buf.st_mode & S_IWUSR) ? "w" : "-");
+            printf((buf.st_mode & S_IXUSR) ? "x" : "-");
+            printf((buf.st_mode & S_IRGRP) ? "r" : "-");
+            printf((buf.st_mode & S_IWGRP) ? "w" : "-");
+            printf((buf.st_mode & S_IXGRP) ? "x" : "-");
+            printf((buf.st_mode & S_IROTH) ? "r" : "-");
+            printf((buf.st_mode & S_IWOTH) ? "w" : "-");
+            printf((buf.st_mode & S_IXOTH) ? "x" : "-");
+            printf("  ");
+
+            // (column 2) print number of hard links to the file
+            printf("%lu  ", buf.st_nlink);
+
+            // (column 3) print the owner of the file
+            printf("%s  ", getpwuid(buf.st_uid)->pw_name);
+
+            // (column 4) print the group of the file
+            printf("%s  ", getgrgid(buf.st_gid)->gr_name);
+
+            // (column 5) print size of the file in characters
+            printf("%10ld  ", buf.st_size);
+
+            // (column 6) print the date
+            // format: mmm dd yyyy hh:mm
+            char *dateStr = malloc(sizeof(char) * 20);
+            time_t *time = &buf.st_mtime;
+            strftime(dateStr, 22, "%b %e %Y %R", localtime(time));
+            printf("%s  ", dateStr);
+            free(dateStr);
+
+            // (column 7) print file name
+            char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
+            strcpy(idk, path);
+            strcat(idk, "/");
+            strcat(idk, dp->d_name);
+
+            DIR *optionalDir = opendir(idk);
+            struct stat optionalBuf;
+
+            if (optionalDir) {
+                // if is a directory
+                shouldHaveQuotes(dp->d_name) ? printf("'%s'/\n", dp->d_name) : printf("%s/\n", dp->d_name);
+            } else if ((stat(idk, &optionalBuf) >= 0) && (optionalBuf.st_mode > 0) && (S_IXUSR & optionalBuf.st_mode)) {
+                // if is an executable file
+                shouldHaveQuotes(dp->d_name) ? printf("'%s'*\n", dp->d_name) : printf("%s*\n", dp->d_name);
+            } else {
+                // else is a normal file
+                shouldHaveQuotes(dp->d_name) ? printf("'%s'\n", dp->d_name) : printf("%s\n", dp->d_name);
+            }
+
+            free(idk);
+    }
 }
 
 // returns true if a file name should have quotes,
