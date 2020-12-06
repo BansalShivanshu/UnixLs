@@ -45,8 +45,9 @@ void printLongInode(char *path, bool inode);
 // print with all flags
 void printAllFlags(char *path, bool eptFirstLine);
 
-// print long recursive
-void printLongRec(char *path, bool eptFirstLine);
+// print recurcively with inode values
+void printRecInode(char *path, bool eptFirstLine);
+
 
 
     /* 
@@ -164,9 +165,8 @@ int main(int argc, char *argv[]) {
             // double combinations
             if (hasL && hasR && !hasI) { // -lR and permutations
                 printRec(path, false, true);
-                // printLongRec(path, false);
             } else if (!hasL && hasR && hasI) { // -Ri and permutations
-                printf("printing -Ri\n");
+                printRecInode(path, false);
             } else if (hasL && !hasR && hasI) { // -li and permutations
                 printf("printing -li\n");
             }
@@ -506,6 +506,43 @@ void printAllFlags(char *path, bool eptFirstLine) {
     } 
 
     closedir(dp2);
+}
+
+// print recurcively with inode values
+void printRecInode(char *path, bool eptFirstLine) {
+    if (eptFirstLine) {
+        printf("\n%s:\n", path);
+    } else {
+        printf("%s:\n", path);
+    }
+
+
+    dir = opendir(path); // no validation required for 'this' directory      
+    printInode(path);
+
+    struct dirent *dir2;
+    DIR *dp2 = opendir(path);
+
+    if (dp2) {
+        // printf("%s is a directory\n", path);
+
+        while ((dir2 = readdir(dp2)) != NULL) {
+            if ((dir2->d_name)[0] == '.' || strcmp(dir2->d_name, ".") == 0 || strcmp(dir2->d_name, "..") == 0) continue;
+
+            if (dir2->d_type == 4) { // is a directory
+                char *newPath = malloc(strlen(path) + 1 + strlen(dir2->d_name) + 1);
+                strcpy(newPath, path);
+                strcat(newPath, "/");
+                strcat(newPath, dir2->d_name);
+
+                printRecInode(newPath, true);
+            
+                free(newPath);
+            }
+        }
+    } 
+
+    closedir(dp2);   
 }
 
 
