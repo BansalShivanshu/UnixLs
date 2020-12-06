@@ -271,14 +271,6 @@ int main(int argc, char *argv[]) {
         exit(INCOR_USAGE);
     }
 
-    // validate the arguments
-    /*
-    if (strlen(argv[1]) < 2 || strlen(argv[1]) > 4) {
-        printf("Invalidate flags\n");
-        return 1;
-    }
-    */
-
     closedir(dir);
 
     return 0;
@@ -397,10 +389,23 @@ void printLongLs(char *path) {
 
 // print recursively
 void printRec(char *path, bool eptFirstLine, bool lng) {
+    char *extraSlash = "";
+    if (path[strlen(path) - 1] != '/') {
+        extraSlash = "/";
+    }
+
     if (eptFirstLine) {
-        printf("\n%s:\n", path);
+        if (shouldHaveQuotes(path)) {
+            printf("\n'%s%s':\n", path, extraSlash);    
+        } else {
+            printf("\n%s%s:\n", path, extraSlash);
+        }
     } else {
-        printf("%s:\n", path);
+        if (shouldHaveQuotes(path)) {
+            printf("'%s%s':\n", path, extraSlash);
+        } else {
+            printf("%s%s:\n", path, extraSlash);
+        }
     }
 
 
@@ -491,7 +496,9 @@ void printLongInode(char *path, bool inode) {
 
             char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
             strcpy(idk, path);
-            strcat(idk, "/");
+            if (path[strlen(path) - 1] != '/') {
+                strcat(idk, "/");
+            }
             strcat(idk, dp->d_name);
 
             DIR *optionalDir = opendir(idk);
@@ -555,10 +562,23 @@ void printLongInode(char *path, bool inode) {
 
 // print with all the flags
 void printAllFlags(char *path, bool eptFirstLine) {
+    char *extraSlash = "";
+    if (path[strlen(path) - 1] != '/') {
+        extraSlash = "/";
+    }
+
     if (eptFirstLine) {
-        printf("\n%s:\n", path);
+        if (shouldHaveQuotes(path)) {
+            printf("\n'%s%s':\n", path, extraSlash);    
+        } else {
+            printf("\n%s%s:\n", path, extraSlash);
+        }
     } else {
-        printf("%s:\n", path);
+        if (shouldHaveQuotes(path)) {
+            printf("'%s':\n", path);
+        } else {
+            printf("%s:\n", path);
+        }
     }
 
     dir = opendir(path); // no validation required for 'this' directory            
@@ -576,7 +596,9 @@ void printAllFlags(char *path, bool eptFirstLine) {
             if (dir2->d_type == 4) { // is a directory
                 char *newPath = malloc(strlen(path) + 1 + strlen(dir2->d_name) + 1);
                 strcpy(newPath, path);
-                strcat(newPath, "/");
+                if (path[strlen(path) - 1] != '/') {
+                    strcat(newPath, "/");
+                }
                 strcat(newPath, dir2->d_name);
 
                 printAllFlags(newPath, true);
