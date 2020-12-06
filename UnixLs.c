@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
             } else if (!hasL && hasR && hasI) { // -Ri and permutations
                 printRecInode(path, false);
             } else if (hasL && !hasR && hasI) { // -li and permutations
-                printf("printing -li\n");
+                printLongInode(path, true);
             }
 
             // all flags
