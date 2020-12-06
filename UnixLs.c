@@ -34,7 +34,7 @@ void printLs(char *path);
 void printLongLs(char *path);
 
 // print recursively
-void printRec(char *path);
+void printRec(char *path, bool eptFirstLine);
 
 // print with inode number
 void printInode(char *path);
@@ -144,8 +144,11 @@ int main(int argc, char *argv[]) {
             if (hasL && !hasR && !hasI) {
                 printLongLs(path);
             } else if (hasR && !hasL && !hasI) {
-                printf("printing recursively\n");
-                printRec(path);
+                // PRINT RECURSIVELY
+                // printRec(path);
+
+                printRec(path, false);
+
             } else if (hasI && !hasL && !hasR) {
                 printInode(path);
             }
@@ -289,21 +292,40 @@ void printLongLs(char *path) {
 }
 
 // print recursively
-void printRec(char *path) {
-    char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
-    strcpy(idk, path);
-    strcat(idk, "/");
-    strcat(idk, dp->d_name);
-
-    if (dir) {
-        if ((dp->d_name)[0] != '.') {
-            printf("%s\n", dp->d_name);
-            printRec(path);
-        }
+void printRec(char *path, bool eptFirstLine) {
+    if (eptFirstLine) {
+        printf("\n%s:\n", path);
+    } else {
+        printf("%s:\n", path);
     }
 
-    free(idk);
-    return;
+
+    dir = opendir(path); // no validation required for 'this' directory            
+    printLs(path);
+
+    struct dirent *dir2;
+    DIR *dp2 = opendir(path);
+
+    if (dp2) {
+        // printf("%s is a directory\n", path);
+
+        while ((dir2 = readdir(dp2)) != NULL) {
+            if ((dir2->d_name)[0] == '.' || strcmp(dir2->d_name, ".") == 0 || strcmp(dir2->d_name, "..") == 0) continue;
+
+            if (dir2->d_type == 4) { // is a directory
+                char *newPath = malloc(strlen(path) + 1 + strlen(dir2->d_name) + 1);
+                strcpy(newPath, path);
+                strcat(newPath, "/");
+                strcat(newPath, dir2->d_name);
+
+                printRec(newPath, true);
+            
+                free(newPath);
+            }
+        }
+    } 
+
+    closedir(dp2);
 }
 
 // print with inode number
@@ -369,4 +391,10 @@ bool validateDir(char *name) {
     }
     return false;
 }
+
+// void getDirectories(char *path) {
+//     if (validateDir(path)) {
+//         dirArr[dirCount++] = path;
+//     }
+// }
 
