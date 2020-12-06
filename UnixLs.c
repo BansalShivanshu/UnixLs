@@ -39,6 +39,12 @@ void printRec(char *path, bool eptFirstLine);
 // print with inode number
 void printInode(char *path);
 
+// print long ls with inode value
+void printLongInode(char *path);
+
+// print with all flags
+void printAllFlags(char *path, bool eptFirstLine);
+
 
     /* 
         Helper Functions
@@ -145,12 +151,13 @@ int main(int argc, char *argv[]) {
                 printLongLs(path);
             } else if (hasR && !hasL && !hasI) {
                 // PRINT RECURSIVELY
-                // printRec(path);
-
                 printRec(path, false);
-
             } else if (hasI && !hasL && !hasR) {
                 printInode(path);
+            }
+
+            if (hasL && hasR && hasI) {
+                printAllFlags(path, false);
             }
         }
 
@@ -369,6 +376,114 @@ void printInode(char *path) {
     printf("\n");
 }
 
+// print long ls with inode values
+void printLongInode(char *path) {
+    if (!dir) {
+        printf("Something went wrong!\n");
+        exit(UNEXP_ERR);
+    }
+
+    while ((dp = readdir(dir)) != NULL) {
+            // skip file if hidden
+            if ((dp->d_name)[0] == '.') continue;
+
+            stat(dp->d_name, &buf);
+
+            // column 0 - print inode number
+            printf("%lu  ", buf.st_ino);
+
+            // (column 1) print file permissions
+            printf((S_ISDIR(buf.st_mode)) ? "d" : "-");
+            printf((buf.st_mode & S_IRUSR) ? "r" : "-");
+            printf((buf.st_mode & S_IWUSR) ? "w" : "-");
+            printf((buf.st_mode & S_IXUSR) ? "x" : "-");
+            printf((buf.st_mode & S_IRGRP) ? "r" : "-");
+            printf((buf.st_mode & S_IWGRP) ? "w" : "-");
+            printf((buf.st_mode & S_IXGRP) ? "x" : "-");
+            printf((buf.st_mode & S_IROTH) ? "r" : "-");
+            printf((buf.st_mode & S_IWOTH) ? "w" : "-");
+            printf((buf.st_mode & S_IXOTH) ? "x" : "-");
+            printf("  ");
+
+            // (column 2) print number of hard links to the file
+            printf("%lu  ", buf.st_nlink);
+
+            // (column 3) print the owner of the file
+            printf("%s  ", getpwuid(buf.st_uid)->pw_name);
+
+            // (column 4) print the group of the file
+            printf("%s  ", getgrgid(buf.st_gid)->gr_name);
+
+            // (column 5) print size of the file in characters
+            printf("%10ld  ", buf.st_size);
+
+            // (column 6) print the date
+            // format: mmm dd yyyy hh:mm
+            char *dateStr = malloc(sizeof(char) * 20);
+            time_t *time = &buf.st_mtime;
+            strftime(dateStr, 22, "%b %e %Y %R", localtime(time));
+            printf("%s  ", dateStr);
+            free(dateStr);
+
+            // (column 7) print file name
+            char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
+            strcpy(idk, path);
+            strcat(idk, "/");
+            strcat(idk, dp->d_name);
+
+            DIR *optionalDir = opendir(idk);
+            struct stat optionalBuf;
+
+            if (optionalDir) {
+                // if is a directory
+                shouldHaveQuotes(dp->d_name) ? printf("'%s'/\n", dp->d_name) : printf("%s/\n", dp->d_name);
+            } else if ((stat(idk, &optionalBuf) >= 0) && (optionalBuf.st_mode > 0) && (S_IXUSR & optionalBuf.st_mode)) {
+                // if is an executable file
+                shouldHaveQuotes(dp->d_name) ? printf("'%s'*\n", dp->d_name) : printf("%s*\n", dp->d_name);
+            } else {
+                // else is a normal file
+                shouldHaveQuotes(dp->d_name) ? printf("'%s'\n", dp->d_name) : printf("%s\n", dp->d_name);
+            }
+
+            free(idk);
+    }
+}
+
+// print with all the flags
+void printAllFlags(char *path, bool eptFirstLine) {
+    if (eptFirstLine) {
+        printf("\n%s:\n", path);
+    } else {
+        printf("%s:\n", path);
+    }
+
+    dir = opendir(path); // no validation required for 'this' directory            
+    printLongInode(path);
+
+    struct dirent *dir2;
+    DIR *dp2 = opendir(path);
+
+    if (dp2) {
+        // printf("%s is a directory\n", path);
+
+        while ((dir2 = readdir(dp2)) != NULL) {
+            if ((dir2->d_name)[0] == '.' || strcmp(dir2->d_name, ".") == 0 || strcmp(dir2->d_name, "..") == 0) continue;
+
+            if (dir2->d_type == 4) { // is a directory
+                char *newPath = malloc(strlen(path) + 1 + strlen(dir2->d_name) + 1);
+                strcpy(newPath, path);
+                strcat(newPath, "/");
+                strcat(newPath, dir2->d_name);
+
+                printAllFlags(newPath, true);
+            
+                free(newPath);
+            }
+        }
+    } 
+
+    closedir(dp2);
+}
 
 // returns true if a file name should have quotes,
 // returns false otherwise
@@ -391,10 +506,4 @@ bool validateDir(char *name) {
     }
     return false;
 }
-
-// void getDirectories(char *path) {
-//     if (validateDir(path)) {
-//         dirArr[dirCount++] = path;
-//     }
-// }
 
