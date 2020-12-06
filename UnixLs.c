@@ -183,6 +183,87 @@ int main(int argc, char *argv[]) {
         // this checks for the flags (arg2)
         // and for the directory (arg3)
 
+        // if second arg is not a flag
+        // or if the third arg is a flag
+        if ((argv[1])[0] != '-' || (argv[2])[0] == '-') {
+            printf("Incorrect usage\n");
+            printf("Usage: ./UnixLs <flags> <dir/path>\n");
+            exit(INCOR_USAGE);
+        }
+
+        for (int i = 1; i < strlen(argv[1]); i++) { // start after '-'
+            switch ((argv[1])[i])
+            {
+            case 'l':
+                if (hasL) {
+                    printf("Flags cannot be repeated\n");
+                    exit(INCOR_USAGE);
+                } else {
+                    hasL = true;
+                }
+                break;
+
+            case 'R':
+                if (hasR) {
+                    printf("Flags cannot be repeated\n");
+                    exit(INCOR_USAGE);
+                } else {
+                    hasR = true;
+                }
+                break;
+
+            case 'i':
+                if (hasI) {
+                    printf("Flags cannot be repeated\n");
+                    exit(INCOR_USAGE);
+                } else {
+                    hasI = true;
+                }
+                break;
+            
+            default:
+                printf("Invalid flag Usage\n");
+                exit(INCOR_USAGE);
+            }
+        }
+
+        char *openPath = argv[2];
+        if (!validateDir(openPath)) {
+            printf("%s is not a directory\n", openPath);
+            exit(INCOR_USAGE);
+        }
+
+        dir = opendir(openPath);
+
+        // print with flags
+
+        // singular flags
+        if (hasL && !hasR && !hasI) {
+            printLongInode(openPath, false);
+            // printLongLs(openPath);
+        } else if (hasR && !hasL && !hasI) {
+            // PRINT RECURSIVELY
+            printRec(openPath, false, false);
+        } else if (hasI && !hasL && !hasR) {
+            printInode(openPath);
+        }
+
+        // double combinations
+        if (hasL && hasR && !hasI) { // -lR and permutations
+            printRec(openPath, false, true);
+        } else if (!hasL && hasR && hasI) { // -Ri and permutations
+            printRecInode(openPath, false);
+        } else if (hasL && !hasR && hasI) { // -li and permutations
+            printLongInode(openPath, true);
+        }
+
+        // all flags
+        if (hasL && hasR && hasI) {
+            printAllFlags(openPath, false);
+        }
+
+        break;
+
     
     default:
         printf("Incorrect usage or,\n");
@@ -367,15 +448,15 @@ void printInode(char *path) {
         // skip file if hidden
         if ((dp->d_name)[0] == '.') continue;
 
-        stat(dp->d_name, &buf);
-
-        printf("%lu ", buf.st_ino);
-    
         // (column 7) print file name
         char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
         strcpy(idk, path);
         strcat(idk, "/");
         strcat(idk, dp->d_name);
+
+        stat(idk, &buf);
+    
+        printf("%lu ", buf.st_ino);
 
         DIR *optionalDir = opendir(idk);
         struct stat optionalBuf;
