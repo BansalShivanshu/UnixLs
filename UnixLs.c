@@ -34,16 +34,19 @@ void printLs(char *path);
 void printLongLs(char *path);
 
 // print recursively
-void printRec(char *path, bool eptFirstLine);
+void printRec(char *path, bool eptFirstLine, bool lng);
 
 // print with inode number
 void printInode(char *path);
 
 // print long ls with inode value
-void printLongInode(char *path);
+void printLongInode(char *path, bool inode);
 
 // print with all flags
 void printAllFlags(char *path, bool eptFirstLine);
+
+// print long recursive
+void printLongRec(char *path, bool eptFirstLine);
 
 
     /* 
@@ -147,15 +150,28 @@ int main(int argc, char *argv[]) {
             dir = opendir(path); // no validation required for 'this' directory            
 
             // print with flags
+
+            // singular flags
             if (hasL && !hasR && !hasI) {
                 printLongLs(path);
             } else if (hasR && !hasL && !hasI) {
                 // PRINT RECURSIVELY
-                printRec(path, false);
+                printRec(path, false, false);
             } else if (hasI && !hasL && !hasR) {
                 printInode(path);
             }
 
+            // double combinations
+            if (hasL && hasR && !hasI) { // -lR and permutations
+                printRec(path, false, true);
+                // printLongRec(path, false);
+            } else if (!hasL && hasR && hasI) { // -Ri and permutations
+                printf("printing -Ri\n");
+            } else if (hasL && !hasR && hasI) { // -li and permutations
+                printf("printing -li\n");
+            }
+
+            // all flags
             if (hasL && hasR && hasI) {
                 printAllFlags(path, false);
             }
@@ -299,7 +315,7 @@ void printLongLs(char *path) {
 }
 
 // print recursively
-void printRec(char *path, bool eptFirstLine) {
+void printRec(char *path, bool eptFirstLine, bool lng) {
     if (eptFirstLine) {
         printf("\n%s:\n", path);
     } else {
@@ -307,8 +323,13 @@ void printRec(char *path, bool eptFirstLine) {
     }
 
 
-    dir = opendir(path); // no validation required for 'this' directory            
-    printLs(path);
+    dir = opendir(path); // no validation required for 'this' directory      
+
+    if (lng) {
+        printLongInode(path, false);
+    } else {
+        printLs(path);
+    }
 
     struct dirent *dir2;
     DIR *dp2 = opendir(path);
@@ -325,7 +346,7 @@ void printRec(char *path, bool eptFirstLine) {
                 strcat(newPath, "/");
                 strcat(newPath, dir2->d_name);
 
-                printRec(newPath, true);
+                printRec(newPath, true, lng);
             
                 free(newPath);
             }
@@ -377,7 +398,7 @@ void printInode(char *path) {
 }
 
 // print long ls with inode values
-void printLongInode(char *path) {
+void printLongInode(char *path, bool inode) {
     if (!dir) {
         printf("Something went wrong!\n");
         exit(UNEXP_ERR);
@@ -387,10 +408,20 @@ void printLongInode(char *path) {
             // skip file if hidden
             if ((dp->d_name)[0] == '.') continue;
 
-            stat(dp->d_name, &buf);
+            char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
+            strcpy(idk, path);
+            strcat(idk, "/");
+            strcat(idk, dp->d_name);
 
-            // column 0 - print inode number
-            printf("%lu  ", buf.st_ino);
+            DIR *optionalDir = opendir(idk);
+            struct stat optionalBuf;
+
+            stat(idk, &buf);
+
+            if (inode) {
+                // column 0 - print inode number
+                printf("%lu  ", buf.st_ino);
+            }
 
             // (column 1) print file permissions
             printf((S_ISDIR(buf.st_mode)) ? "d" : "-");
@@ -426,14 +457,6 @@ void printLongInode(char *path) {
             free(dateStr);
 
             // (column 7) print file name
-            char *idk = malloc(strlen(path) + strlen(dp->d_name) + 2);
-            strcpy(idk, path);
-            strcat(idk, "/");
-            strcat(idk, dp->d_name);
-
-            DIR *optionalDir = opendir(idk);
-            struct stat optionalBuf;
-
             if (optionalDir) {
                 // if is a directory
                 shouldHaveQuotes(dp->d_name) ? printf("'%s'/\n", dp->d_name) : printf("%s/\n", dp->d_name);
@@ -458,7 +481,7 @@ void printAllFlags(char *path, bool eptFirstLine) {
     }
 
     dir = opendir(path); // no validation required for 'this' directory            
-    printLongInode(path);
+    printLongInode(path, true);
 
     struct dirent *dir2;
     DIR *dp2 = opendir(path);
@@ -484,6 +507,7 @@ void printAllFlags(char *path, bool eptFirstLine) {
 
     closedir(dp2);
 }
+
 
 // returns true if a file name should have quotes,
 // returns false otherwise
